@@ -9,10 +9,9 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from httpx._multipart import MultipartStream
 
 from .exceptions import ApiError, TransportError
-from .multipart import FileUpload
+from .multipart import FileUpload, encode_form
 from .retry import RetryPolicy
 
 DEFAULT_BASE_URL = "https://api.pricezaim.ru"
@@ -235,10 +234,9 @@ class Client:
             # httpx отправляет пустой список файлов как urlencoded, поэтому
             # для multipart без файлов тело собирается вручную.
             if force_multipart and form is not None and not files:
-                stream = MultipartStream(data=form, files=[])
-                content = b"".join(stream)
+                content, content_type = encode_form(form)
                 request_data = None
-                headers["Content-Type"] = stream.content_type
+                headers["Content-Type"] = content_type
             try:
                 response = self._http.request(
                     method,
