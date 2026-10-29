@@ -7,19 +7,9 @@ Python-клиент публичного API [pricezaim](https://api.pricezaim.r
 
 ## Установка
 
-После публикации в PyPI:
-
 ```bash
 pip install pricezaim-sdk
 ```
-
-До публикации:
-
-```bash
-pip install "pricezaim-sdk @ git+https://github.com/horatiiwork-design/pricezaim-sdk-python.git"
-```
-
-Для приватного GitHub-репозитория нужен токен с доступом к нему.
 
 ## Начало работы
 
