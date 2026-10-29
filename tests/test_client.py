@@ -79,9 +79,18 @@ def test_create_auction_always_uses_multipart() -> None:
         assert request.method == "POST"
         assert request.headers["content-type"].startswith("multipart/form-data")
         assert b'name="title"' in request.content
+        assert request.content.count(b'name="photo_types[]"') == 2
+        assert b'name="client_marketing_agreed"\r\n\r\n1\r\n' in request.content
         return httpx.Response(201, json={"id": 10, "title": "New"})
 
-    result = make_client(handler).auctions.create({"title": "New", "required_amount": 500000})
+    result = make_client(handler).auctions.create(
+        {
+            "title": "New",
+            "required_amount": 500000,
+            "photo_types[]": ["passport", "car"],
+            "client_marketing_agreed": True,
+        }
+    )
 
     assert result["title"] == "New"
 
