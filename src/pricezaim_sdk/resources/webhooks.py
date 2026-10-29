@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from ..models import Webhook
 from ..page import Page
 from .base import Resource
+
+WebhookList = list[Webhook]
 
 
 class Webhooks(Resource):
@@ -16,7 +19,7 @@ class Webhooks(Resource):
         """Возвращает список вебхуков без секретов."""
         return self.client.get("/v1/webhooks")
 
-    def list_dto(self) -> list[Webhook]:
+    def list_dto(self) -> WebhookList:
         """Возвращает список вебхуков как DTO."""
         data = self.list().get("data", [])
         if not isinstance(data, list):

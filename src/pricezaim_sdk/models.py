@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 
 def _str(data: Mapping[str, Any], key: str) -> str | None:
@@ -127,7 +128,11 @@ class ClientProfile:
             consent_pd_date=_str(data, "consent_pd_date"),
             credit_history_date=_str(data, "credit_history_date"),
             credit_history_end_date=_str(data, "credit_history_end_date"),
-            marketing_agreed=_bool(data, "marketing_agreed") if data.get("marketing_agreed") is not None else None,
+            marketing_agreed=(
+                _bool(data, "marketing_agreed")
+                if data.get("marketing_agreed") is not None
+                else None
+            ),
             employment_type=_str(data, "employment_type"),
             employment_org=_str(data, "employment_org"),
             employment_position=_str(data, "employment_position"),
@@ -208,7 +213,9 @@ class Auction:
             creator_id=_int(data, "creator_id"),
             comment=_str(data, "comment"),
             client=_dict(data, "client"),
-            client_profile=ClientProfile.from_dict(profile) if isinstance(profile, Mapping) else None,
+            client_profile=(
+                ClientProfile.from_dict(profile) if isinstance(profile, Mapping) else None
+            ),
             city=_str(data, "city"),
             city_fias=_str(data, "city_fias"),
             vin=_str(data, "vin"),
@@ -366,7 +373,9 @@ class Deal:
             requisites=data.get("requisites"),
             documents=_list(data, "documents"),
             client=_dict(data, "client"),
-            client_profile=ClientProfile.from_dict(profile) if isinstance(profile, Mapping) else None,
+            client_profile=(
+                ClientProfile.from_dict(profile) if isinstance(profile, Mapping) else None
+            ),
             bid=_dict(data, "bid"),
             auction=_dict(data, "auction"),
             created_at=_str(data, "created_at"),
@@ -378,7 +387,9 @@ class Deal:
 
     def document_objects(self) -> list[DealDocument]:
         """Возвращает документы как DTO."""
-        return [DealDocument.from_dict(item) for item in self.documents if isinstance(item, Mapping)]
+        return [
+            DealDocument.from_dict(item) for item in self.documents if isinstance(item, Mapping)
+        ]
 
     def to_dict(self) -> dict[str, Any]:
         """Возвращает исходные данные API."""

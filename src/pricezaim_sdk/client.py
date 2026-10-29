@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping, Sequence
-from urllib.parse import quote
+from typing import Any
 
 import httpx
+from httpx._multipart import MultipartStream
 
 from .exceptions import ApiError, TransportError
 from .multipart import FileUpload
@@ -122,6 +123,7 @@ class Client:
             form=data,
             files=files,
             idempotency_key=idempotency_key,
+            force_multipart=True,
         )
 
     def put_multipart(
@@ -139,6 +141,7 @@ class Client:
             form=data,
             files=files,
             idempotency_key=idempotency_key,
+            force_multipart=True,
         )
 
     def send(
@@ -151,6 +154,7 @@ class Client:
         form: Mapping[str, Any] | None = None,
         files: Sequence[FileUpload] = (),
         idempotency_key: str | None = None,
+        force_multipart: bool = False,
     ) -> dict[str, Any]:
         """Отправляет запрос, обрабатывает ошибки и декодирует JSON."""
         response = self.request(
@@ -161,6 +165,7 @@ class Client:
             form=form,
             files=files,
             idempotency_key=idempotency_key,
+            force_multipart=force_multipart,
         )
         if response.status_code >= 400:
             raise ApiError.from_response(response)
@@ -215,8 +220,9 @@ class Client:
         form: Mapping[str, Any] | None = None,
         files: Sequence[FileUpload] = (),
         idempotency_key: str | None = None,
+        force_multipart: bool = False,
     ) -> httpx.Response:
-        """Выполняет HTTP-запрос с авторизацией и opt-in повторами."""
+        """Выполняет HTTP-запрос с авторизацией и повторами по env-флагу."""
         headers = dict(self._default_headers)
         if idempotency_key is not None:
             headers["Idempotency-Key"] = idempotency_key
@@ -224,13 +230,23 @@ class Client:
         attempts = self._retry.max_attempts if self._retry.enabled else 1
         for attempt in range(1, attempts + 1):
             handles, multipart = _open_files(files)
+            content = None
+            request_data = form
+            # httpx отправляет пустой список файлов как urlencoded, поэтому
+            # для multipart без файлов тело собирается вручную.
+            if force_multipart and form is not None and not files:
+                stream = MultipartStream(data=form, files=[])
+                content = b"".join(stream)
+                request_data = None
+                headers["Content-Type"] = stream.content_type
             try:
                 response = self._http.request(
                     method,
                     url,
                     params=_encode_params(params),
                     json=json_body,
-                    data=form,
+                    content=content,
+                    data=request_data,
                     files=multipart,
                     headers=headers,
                     timeout=self.timeout,
@@ -244,10 +260,8 @@ class Client:
                 for handle in handles:
                     handle.close()
 
-            if (
-                self._retry.allows_retry(method, headers, attempt)
-                and self._retry.should_retry_status(response.status_code)
-            ):
+            can_retry = self._retry.allows_retry(method, headers, attempt)
+            if can_retry and self._retry.should_retry_status(response.status_code):
                 retry_after = self._retry.parse_retry_after(response.headers.get("Retry-After", ""))
                 time.sleep(self._retry.delay(attempt, retry_after))
                 continue

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from ..models import Deal, DealDocument
 from ..multipart import FileUpload
 from ..page import Page
 from .base import Resource
+
+DealDocumentList = list[DealDocument]
 
 
 class Deals(Resource):
@@ -33,7 +36,7 @@ class Deals(Resource):
         """Возвращает список документов сделки."""
         return self.client.get(f"/v1/deals/{self._id(deal_id)}/documents")
 
-    def documents_dto(self, deal_id: int | str) -> list[DealDocument]:
+    def documents_dto(self, deal_id: int | str) -> DealDocumentList:
         """Возвращает документы сделки как DTO."""
         data = self.documents(deal_id).get("data", [])
         if not isinstance(data, list):

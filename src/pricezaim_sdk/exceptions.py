@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
 
@@ -56,10 +57,7 @@ class ApiError(PricezaimError):
             body = {}
 
         message = str(
-            body.get("message")
-            or body.get("detail")
-            or body.get("error")
-            or "API request failed"
+            body.get("message") or body.get("detail") or body.get("error") or "API request failed"
         )
         error_code = str(body["code"]) if body.get("code") is not None else None
         request_id = response.headers.get("X-Request-Id")
@@ -111,8 +109,8 @@ def _parse_retry_after(value: str) -> int | None:
     if value.isdigit():
         return int(value)
     try:
-        from email.utils import parsedate_to_datetime
         from datetime import datetime, timezone
+        from email.utils import parsedate_to_datetime
 
         dt = parsedate_to_datetime(value)
         if dt.tzinfo is None:

@@ -62,7 +62,9 @@ def test_validation_error_exposes_field_errors() -> None:
 
 def test_rate_limit_exposes_retry_after() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(429, json={"message": "Too many requests"}, headers={"Retry-After": "7"})
+        return httpx.Response(
+            429, json={"message": "Too many requests"}, headers={"Retry-After": "7"}
+        )
 
     with pytest.raises(ApiError) as exc_info:
         make_client(handler).deals.get(1)
@@ -70,6 +72,18 @@ def test_rate_limit_exposes_retry_after() -> None:
     assert exc_info.value.status == 429
     assert exc_info.value.is_rate_limited
     assert exc_info.value.retry_after == 7
+
+
+def test_create_auction_always_uses_multipart() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.headers["content-type"].startswith("multipart/form-data")
+        assert b'name="title"' in request.content
+        return httpx.Response(201, json={"id": 10, "title": "New"})
+
+    result = make_client(handler).auctions.create({"title": "New", "required_amount": 500000})
+
+    assert result["title"] == "New"
 
 
 def test_post_sends_idempotency_key() -> None:
@@ -98,7 +112,9 @@ def test_dto_methods() -> None:
             httpx.Response(201, json={"success": True, "bid": {"id": 55, "amount": 100}}),
             httpx.Response(
                 200,
-                json={"data": [{"id": 7, "url": "https://example.com", "events": ["auction.started"]}]},
+                json={
+                    "data": [{"id": 7, "url": "https://example.com", "events": ["auction.started"]}]
+                },
             ),
         ]
     )

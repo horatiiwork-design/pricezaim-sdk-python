@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
-from ..client import Client
 from ..models import Auction
 from ..multipart import FileUpload
 from ..page import Page
@@ -44,13 +44,11 @@ class Auctions(Resource):
         files: Sequence[FileUpload] = (),
     ) -> dict[str, Any]:
         """Создаёт аукцион в статусе draft."""
-        if files:
-            return self.client.post_multipart(
-                "/v1/auctions",
-                data=payload,
-                files=self._files(files),
-            )
-        return self.client.post("/v1/auctions", payload)
+        return self.client.post_multipart(
+            "/v1/auctions",
+            data=payload,
+            files=self._files(files),
+        )
 
     def create_dto(
         self,

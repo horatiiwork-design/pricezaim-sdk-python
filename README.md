@@ -1,33 +1,27 @@
 # pricezaim Python SDK
 
-Python-клиент для публичного API [pricezaim](https://api.pricezaim.ru/docs).
+Python-клиент публичного API [pricezaim](https://api.pricezaim.ru/docs).
+Синхронный, на `httpx`, с типами, DTO и проверкой подписи вебхуков.
 
-- авторизация по `X-API-Key`;
-- синхронный HTTP-клиент на `httpx`;
-- ресурсы `auctions`, `bids`, `deals`, `webhooks`;
-- DTO для основных сущностей;
-- пагинация;
-- проверка HMAC-подписи вебхуков;
-- opt-in автоповторы;
-- `Idempotency-Key` для безопасных повторов.
-
-Требования: Python 3.10+.
+Требуется Python 3.10+.
 
 ## Установка
+
+После публикации в PyPI:
 
 ```bash
 pip install pricezaim-sdk
 ```
 
-Пока пакет не опубликован в PyPI, установите из приватного репозитория:
+До публикации:
 
 ```bash
 pip install "pricezaim-sdk @ git+https://github.com/horatiiwork-design/pricezaim-sdk-python.git"
 ```
 
-Для приватного GitHub-репозитория нужен токен с доступом к репозиторию.
+Для приватного GitHub-репозитория нужен токен с доступом к нему.
 
-## Быстрый старт
+## Начало работы
 
 ```python
 import os
@@ -44,89 +38,58 @@ for auction in page:
 print("Всего:", page.total)
 ```
 
-Клиент можно использовать как context manager:
+Клиент можно закрывать явно или использовать как context manager:
 
 ```python
 with Client(os.environ["PRICEZAIM_API_KEY"]) as client:
     auctions = client.auctions.list()
 ```
 
-## DTO
+Параметры клиента:
+
+```python
+Client(
+    api_key,
+    base_url="https://api.pricezaim.ru",
+    timeout=15.0,
+    http_client=None,  # свой httpx.Client, если нужен прокси или тесты
+)
+```
+
+## Ресурсы
+
+| Ресурс | Что делает |
+|---|---|
+| `client.auctions` | список, карточка, создание, изменение, запуск, архивация, победитель, отказ, фото и файлы |
+| `client.bids` | свои ставки, ставки аукциона, размещение ставки |
+| `client.deals` | список, карточка, документы, реквизиты, согласование, чат |
+| `client.webhooks` | создание, изменение, удаление, тестовая доставка, журнал и повтор доставки |
+
+Методы с суффиксом `_dto` возвращают dataclasses:
 
 ```python
 from pricezaim_sdk import Auction
 
-auction: Auction = client.auctions.get_dto(991)
+auction = client.auctions.get_dto(991)
 
-print(auction.id)
-print(auction.required_amount)
-print(auction.client_profile.inn if auction.client_profile else None)
-
-page = client.auctions.list_dto()
-for item in page:
-    assert isinstance(item, Auction)
+if isinstance(auction, Auction):
+    print(auction.required_amount)
+    print(auction.client_profile.inn if auction.client_profile else None)
 ```
 
-Доступны:
-
-- `Auction`
-- `ClientProfile`
-- `Bid`
-- `Deal`
-- `DealDocument`
-- `Webhook`
-
-DTO создаются через `from_dict()` и сохраняют исходные данные в `raw` / `to_dict()`.
-
-## Аукционы
-
-```python
-created = client.auctions.create({
-    "title": "Заявка №...",
-    "city": "Москва",
-    "required_amount": 500000,
-})
-
-client.auctions.start(created["id"])
-client.auctions.stop(created["id"])
-```
-
-С файлами:
-
-```python
-from pricezaim_sdk import FileUpload
-
-client.auctions.update(
-    991,
-    {"required_amount": 600000},
-    [FileUpload("photos[]", "/tmp/photo.jpg")],
-)
-```
-
-## Ставки
-
-```python
-client.bids.place(
-    991,
-    {"amount": 150000, "interest_rate": 19.5, "term": 24},
-    idempotency_key="bid-991-1",
-)
-```
-
-## Сделки
-
-```python
-deals = client.deals.list(status="active")
-deal = client.deals.get(157)
-client.deals.send_chat(157, "Документы отправлены.")
-```
+DTO переживают неполный ответ: отсутствующие поля будут `None` или пустыми
+коллекциями. Исходный словарь доступен в `to_dict()`.
 
 ## Вебхуки
 
+Подпись считается по сырому телу. Если пересобрать JSON, подпись не сойдётся.
+
 ```python
+import os
+
 from pricezaim_sdk import WebhookEvent, WebhookEventType, verify_request
 
-raw_body = request.get_data()  # сырое тело, не json.dumps повторно
+raw_body = request.body  # bytes, тело запроса из вашего фреймворка
 headers = request.headers
 
 if not verify_request(raw_body, os.environ["PRICEZAIM_WEBHOOK_SECRET"], headers):
@@ -139,18 +102,11 @@ if event.type is WebhookEventType.AUCTION_STARTED:
     # ...
 ```
 
-`WebhookEvent` даёт:
+`WebhookEvent` отдаёт `event_id`, `name`, `type`, `is_known`, `auction_id` и
+`payload`. Неизвестное событие нужно залогировать и ответить `200`, чтобы новые
+события на платформе не ломали приёмник.
 
-- `event_id` — для дедупликации;
-- `name` — имя события;
-- `type` — `WebhookEventType | None`;
-- `is_known` — известно ли событие;
-- `auction_id` — id аукциона, если есть;
-- `payload` / `to_dict()` — весь конверт.
-
-Неизвестное событие нужно логировать и отвечать `200`, а не `400`.
-
-## Автоповторы
+## Повторы запросов
 
 По умолчанию выключены:
 
@@ -160,16 +116,10 @@ export PRICEZAIM_SDK_RETRY_ATTEMPTS=3
 export PRICEZAIM_SDK_RETRY_BASE_DELAY_MS=200
 ```
 
-Повторяются:
-
-- `429`, `500`, `502`, `503`, `504`;
-- сетевые ошибки и таймауты;
-- `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS`;
-- `POST`/`PATCH` только с `idempotency_key`.
-
-Не повторяются `400`, `401`, `403`, `404`, `422`.
-
-При `429` учитывается `Retry-After`.
+Повторяются `429`, `500`, `502`, `503`, `504` и сетевые ошибки. `GET`, `HEAD`,
+`PUT`, `DELETE`, `OPTIONS` повторяются всегда; `POST` и `PATCH` — только с
+`idempotency_key`. Ответы `400`, `401`, `403`, `404`, `422` не повторяются.
+`Retry-After` учитывается.
 
 ## Ошибки
 
@@ -184,8 +134,15 @@ except ApiError as exc:
     print(exc.status, exc.error_code, exc.request_id, exc.retry_after)
 ```
 
-`TransportError` — сеть, DNS, таймаут, TLS.
+`TransportError` выбрасывается при сетевой ошибке, таймауте или TLS.
 
-## Документация
+## Разработка
 
-Подробный справочник по методам: [`docs/api.md`](docs/api.md).
+```bash
+python -m pytest
+ruff check src tests
+mypy src
+python -m build
+```
+
+Справочник по методам и типам — в [`docs/api.md`](docs/api.md).

@@ -1,197 +1,184 @@
-# Справочник методов Python SDK
-
-Все ресурсы доступны через `Client`:
-
-```python
-from pricezaim_sdk import Client
-
-client = Client(api_key)
-```
+# Справочник методов
 
 ## Client
 
-| Метод | Возвращает | Назначение |
-|---|---|---|
-| `auctions` | `Auctions` | Ресурс аукционов |
-| `bids` | `Bids` | Ресурс ставок |
-| `deals` | `Deals` | Ресурс сделок |
-| `webhooks` | `Webhooks` | Ресурс вебхуков |
-| `get(path, params=...)` | `dict` | GET-запрос |
-| `post(path, payload=..., idempotency_key=...)` | `dict` | POST с JSON |
-| `post_multipart(path, data=..., files=...)` | `dict` | POST multipart |
-| `put(path, payload)` | `dict` | PUT с JSON |
-| `put_multipart(path, data=..., files=...)` | `dict` | PUT multipart |
-| `delete(path)` | `dict` | DELETE |
-| `send(...)` | `dict` | Запрос + JSON-декодирование |
-| `send_raw(method, path, params=...)` | `httpx.Response` | Сырой ответ для файлов |
-| `request(...)` | `httpx.Response` | HTTP-запрос с повторами |
-| `retry_policy` | `RetryPolicy` | Текущая политика повторов |
-| `close()` | `None` | Закрыть собственный HTTP-клиент |
+```python
+Client(api_key, *, base_url="https://api.pricezaim.ru", timeout=15.0,
+       http_client=None, headers=None)
+```
+
+| Метод | Назначение |
+|---|---|
+| `client.auctions` | ресурс аукционов |
+| `client.bids` | ресурс ставок |
+| `client.deals` | ресурс сделок |
+| `client.webhooks` | ресурс вебхуков |
+| `client.get(path, params=...)` | GET |
+| `client.post(path, payload=..., idempotency_key=...)` | POST с JSON |
+| `client.post_multipart(path, data=..., files=...)` | POST с файлами |
+| `client.put(path, payload)` | PUT с JSON |
+| `client.put_multipart(path, data=..., files=...)` | PUT с файлами |
+| `client.delete(path)` | DELETE |
+| `client.send(...)` | запрос с JSON-ответом |
+| `client.send_raw(...)` | `httpx.Response` |
+| `client.request(...)` | низкоуровневый запрос |
+| `client.close()` | закрыть HTTP-клиент |
+| `client.retry_policy` | текущая политика повторов |
 
 ## Аукционы
 
-```python
-client.auctions
-```
+| Метод | Возвращает |
+|---|---|
+| `list(**filters)` | `Page[dict]` |
+| `my(**filters)` | `Page[dict]` |
+| `list_dto(**filters)` | `Page[Auction]` |
+| `my_dto(**filters)` | `Page[Auction]` |
+| `get(auction_id)` | `dict` |
+| `get_dto(auction_id)` | `Auction` |
+| `create(payload, files=...)` | `dict` |
+| `create_dto(payload, files=...)` | `Auction` |
+| `update(auction_id, payload, files=...)` | `dict` |
+| `update_dto(auction_id, payload, files=...)` | `Auction` |
+| `start(auction_id)` | `dict` |
+| `stop(auction_id)` | `dict` |
+| `select_winner(auction_id, bid_id)` | `dict` |
+| `duplicate(auction_id)` | `dict` |
+| `restore_duplicate(auction_id)` | `dict` |
+| `refuse(auction_id, payload)` | `dict` |
+| `restore_refusal(auction_id)` | `dict` |
+| `photos(auction_id)` | `dict` |
+| `download_file(auction_id, file_id)` | `bytes` |
 
-| Метод | HTTP | Возвращает | Назначение |
-|---|---|---|---|
-| `list(**filters)` | `GET /v1/auctions` | `Page[dict]` | Доступные аукционы |
-| `my(**filters)` | `GET /v1/auctions/my` | `Page[dict]` | Аукционы организации |
-| `list_dto(**filters)` | `GET /v1/auctions` | `Page[Auction]` | С DTO |
-| `my_dto(**filters)` | `GET /v1/auctions/my` | `Page[Auction]` | С DTO |
-| `get(auction_id)` | `GET /v1/auctions/{id}` | `dict` | Карточка |
-| `get_dto(auction_id)` | `GET /v1/auctions/{id}` | `Auction` | Карточка как DTO |
-| `create(payload, files=...)` | `POST /v1/auctions` | `dict` | Создать draft |
-| `create_dto(payload, files=...)` | `POST /v1/auctions` | `Auction` | Создать и вернуть DTO |
-| `update(id, payload, files=...)` | `PUT /v1/auctions/{id}` | `dict` | Изменить |
-| `update_dto(id, payload, files=...)` | `PUT /v1/auctions/{id}` | `Auction` | Изменить и вернуть DTO |
-| `start(id)` | `POST /v1/auctions/{id}/start` | `dict` | Запустить |
-| `stop(id)` | `POST /v1/auctions/{id}/stop` | `dict` | Архивировать |
-| `select_winner(id, bid_id)` | `POST /v1/auctions/{id}/winner` | `dict` | Выбрать победителя |
-| `duplicate(id)` | `POST /v1/auctions/{id}/duplicate` | `dict` | Пометить дублем |
-| `restore_duplicate(id)` | `DELETE /v1/auctions/{id}/duplicate` | `dict` | Снять пометку |
-| `refuse(id, payload)` | `POST /v1/auctions/{id}/refusal` | `dict` | Отказаться |
-| `restore_refusal(id)` | `DELETE /v1/auctions/{id}/refusal` | `dict` | Снять отказ |
-| `photos(id)` | `GET /v1/auctions/{id}/photos` | `dict` | Фото и файлы |
-| `download_file(id, file_id)` | `GET /v1/auctions/{id}/files/{file_id}` | `bytes` | Скачать файл |
-
-Файлы:
+Файл передаётся через `FileUpload`:
 
 ```python
 from pricezaim_sdk import FileUpload
 
-FileUpload("photos[]", "/tmp/photo.jpg", "photo.jpg")
+client.auctions.update(
+    991,
+    {"required_amount": 600000},
+    [FileUpload("photos[]", "/tmp/photo.jpg", "photo.jpg")],
+)
 ```
+
+`filters` — query-параметры API: `status`, `city`, `city[]`, `date_from`,
+`date_to`, `page`, `per_page` и другие.
 
 ## Ставки
 
-```python
-client.bids
-```
-
-| Метод | HTTP | Возвращает | Назначение |
-|---|---|---|---|
-| `my(**filters)` | `GET /v1/bids/my` | `Page[dict]` | Свои ставки |
-| `my_dto(**filters)` | `GET /v1/bids/my` | `Page[Bid]` | С DTO |
-| `for_auction(auction_id, **filters)` | `GET /v1/auctions/{id}/bids` | `Page[dict]` | Ставки аукциона |
-| `for_auction_dto(auction_id, **filters)` | `GET /v1/auctions/{id}/bids` | `Page[Bid]` | С DTO |
-| `place(auction_id, payload, idempotency_key=...)` | `POST /v1/auctions/{id}/bids` | `dict` | Поставить ставку |
-| `place_dto(...)` | `POST /v1/auctions/{id}/bids` | `Bid` | Ставка как DTO |
+| Метод | Возвращает |
+|---|---|
+| `my(**filters)` | `Page[dict]` |
+| `my_dto(**filters)` | `Page[Bid]` |
+| `for_auction(auction_id, **filters)` | `Page[dict]` |
+| `for_auction_dto(auction_id, **filters)` | `Page[Bid]` |
+| `place(auction_id, payload, idempotency_key=...)` | `dict` |
+| `place_dto(auction_id, payload, idempotency_key=...)` | `Bid` |
 
 `payload`: `amount`, `interest_rate`, `term`, `comment`.
 
 ## Сделки
 
-```python
-client.deals
-```
-
-| Метод | HTTP | Возвращает | Назначение |
-|---|---|---|---|
-| `list(**filters)` | `GET /v1/deals` | `Page[dict]` | Список сделок |
-| `list_dto(**filters)` | `GET /v1/deals` | `Page[Deal]` | С DTO |
-| `get(deal_id)` | `GET /v1/deals/{id}` | `dict` | Карточка |
-| `get_dto(deal_id)` | `GET /v1/deals/{id}` | `Deal` | Карточка как DTO |
-| `documents(deal_id)` | `GET /v1/deals/{id}/documents` | `dict` | Документы |
-| `documents_dto(deal_id)` | `GET /v1/deals/{id}/documents` | `list[DealDocument]` | Документы как DTO |
-| `upload_documents(id, files, fields=..., idempotency_key=...)` | `POST /v1/deals/{id}/documents` | `dict` | Загрузить |
-| `requisites(deal_id)` | `GET /v1/deals/{id}/requisites` | `dict` | Реквизиты |
-| `approve(deal_id, payload=..., idempotency_key=...)` | `POST /v1/deals/{id}/approve` | `dict` | Согласовать |
-| `chat(deal_id, **filters)` | `GET /v1/deals/{id}/chat` | `dict` | История чата |
-| `send_chat(deal_id, message, payload=..., idempotency_key=...)` | `POST /v1/deals/{id}/chat` | `dict` | Сообщение |
-| `download_document(deal_id, document_id)` | `GET /v1/deals/{id}/documents/{doc_id}` | `bytes` | Скачать |
-| `delete_document(deal_id, document_id)` | `DELETE /v1/deals/{id}/documents/{doc_id}` | `dict` | Удалить |
+| Метод | Возвращает |
+|---|---|
+| `list(**filters)` | `Page[dict]` |
+| `list_dto(**filters)` | `Page[Deal]` |
+| `get(deal_id)` | `dict` |
+| `get_dto(deal_id)` | `Deal` |
+| `documents(deal_id)` | `dict` |
+| `documents_dto(deal_id)` | `list[DealDocument]` |
+| `upload_documents(deal_id, files, fields=..., idempotency_key=...)` | `dict` |
+| `requisites(deal_id)` | `dict` |
+| `approve(deal_id, payload=..., idempotency_key=...)` | `dict` |
+| `chat(deal_id, **filters)` | `dict` |
+| `send_chat(deal_id, message, payload=..., idempotency_key=...)` | `dict` |
+| `download_document(deal_id, document_id)` | `bytes` |
+| `delete_document(deal_id, document_id)` | `dict` |
 
 ## Вебхуки
 
-```python
-client.webhooks
-```
-
-| Метод | HTTP | Возвращает | Назначение |
-|---|---|---|---|
-| `list()` | `GET /v1/webhooks` | `dict` | Список без секретов |
-| `list_dto()` | `GET /v1/webhooks` | `list[Webhook]` | С DTO |
-| `create(payload, idempotency_key=...)` | `POST /v1/webhooks` | `dict` | Создать |
-| `create_dto(...)` | `POST /v1/webhooks` | `Webhook` | Создать и вернуть DTO |
-| `update(id, payload)` | `PUT /v1/webhooks/{id}` | `dict` | Изменить |
-| `update_dto(id, payload)` | `PUT /v1/webhooks/{id}` | `Webhook` | Изменить и вернуть DTO |
-| `delete(id)` | `DELETE /v1/webhooks/{id}` | `dict` | Удалить |
-| `test(id)` | `POST /v1/webhooks/{id}/test` | `dict` | Тестовый пинг |
-| `deliveries(id, **filters)` | `GET /v1/webhooks/{id}/deliveries` | `Page[dict]` | Журнал |
-| `retry_delivery(webhook_id, delivery_id)` | `POST /v1/webhooks/{id}/deliveries/{delivery_id}/retry` | `dict` | Повторить |
+| Метод | Возвращает |
+|---|---|
+| `list()` | `dict` |
+| `list_dto()` | `list[Webhook]` |
+| `create(payload, idempotency_key=...)` | `dict` |
+| `create_dto(payload, idempotency_key=...)` | `Webhook` |
+| `update(webhook_id, payload)` | `dict` |
+| `update_dto(webhook_id, payload)` | `Webhook` |
+| `delete(webhook_id)` | `dict` |
+| `test(webhook_id)` | `dict` |
+| `deliveries(webhook_id, **filters)` | `Page[dict]` |
+| `retry_delivery(webhook_id, delivery_id)` | `dict` |
 
 ## Page
 
-`Page[T]` поддерживает `len()`, `iter()`, индексацию и `map()`.
+`Page` поддерживает `len()`, `iter()`, индексацию и `map()`.
 
-| Свойство / метод | Возвращает | Назначение |
-|---|---|---|
-| `items` | `list[T]` | Элементы |
-| `data` | `list[T]` | Псевдоним `items` |
-| `meta` | `dict` | Метаданные |
-| `raw` | `dict` | Исходный ответ |
-| `total` | `int` | Всего записей |
-| `current_page` | `int` | Текущая страница |
-| `last_page` | `int` | Последняя страница |
-| `per_page` | `int` | Размер страницы |
-| `is_empty()` | `bool` | Пуста ли страница |
-| `map(fn)` | `Page[U]` | Преобразовать элементы |
+| Свойство / метод | Возвращает |
+|---|---|
+| `items` / `data` | `list` |
+| `meta` | `dict` |
+| `raw` | `dict` |
+| `total` | `int` |
+| `current_page` | `int` |
+| `last_page` | `int` |
+| `per_page` | `int` |
+| `is_empty()` | `bool` |
+| `map(fn)` | `Page` |
 
 ## DTO
 
-| DTO | Основные поля |
+Все DTO имеют `from_dict()` и `to_dict()`. `to_dict()` возвращает исходный
+ответ API.
+
+| DTO | Поля |
 |---|---|
-| `Auction` | `id`, `status`, `required_amount`, `can_bid`, `client_profile` |
+| `Auction` | `id`, `uuid`, `status`, `required_amount`, `can_bid`, `client_profile` |
 | `ClientProfile` | `inn`, `passport_number`, `income_salary`; содержит ПДн |
 | `Bid` | `id`, `auction_id`, `amount`, `interest_rate`, `term` |
-| `Deal` | `id`, `status`, `documents`, `document_objects()` |
+| `Deal` | `id`, `auction_id`, `status`, `documents`, `document_objects()` |
 | `DealDocument` | `id`, `original_name`, `mime`, `size` |
 | `Webhook` | `id`, `url`, `events`, `active`, `has_secret` |
 
-Все DTO имеют `from_dict()` и `to_dict()`.
+## Вебхуки: подпись и событие
 
-## Вебхуки
+```python
+sign(payload, secret) -> str
+verify(payload, secret, signature, timestamp=None, tolerance=300) -> bool
+verify_request(payload, secret, headers, tolerance=300) -> bool
 
-| Функция | Возвращает | Назначение |
-|---|---|---|
-| `verify(payload, secret, signature, timestamp=None, tolerance=300)` | `bool` | Проверить HMAC |
-| `verify_request(payload, secret, headers, tolerance=300)` | `bool` | Проверить по заголовкам |
-| `sign(payload, secret)` | `str` | Посчитать HMAC-SHA256 |
+WebhookEvent.from_json(raw)
+WebhookEvent.from_dict(payload)
 
-`WebhookEvent`:
+event.event_id
+event.name
+event.type
+event.is_known
+event.auction_id
+event.payload
+event.to_dict()
+event.is_(event_type)
+```
 
-| Свойство / метод | Возвращает | Назначение |
-|---|---|---|
-| `from_json(raw)` | `WebhookEvent` | Разобрать тело |
-| `from_dict(payload)` | `WebhookEvent` | Разобрать словарь |
-| `event_id` | `str` | ID события |
-| `name` | `str` | Имя события |
-| `type` | `WebhookEventType \| None` | Известный тип |
-| `is_known` | `bool` | Известно ли событие |
-| `auction_id` | `int \| None` | ID аукциона |
-| `payload` | `dict` | Полный конверт |
-| `is_(event_type)` | `bool` | Сравнить тип |
+## Повторы
 
-`WebhookEventType` — enum известных событий, включая `AUCTION_STARTED`, `BID_OUTBID`, `DEAL_CREATED`, `WEBHOOK_TEST`.
-
-## Автоповторы
-
-| Условие | Повтор |
+| Ситуация | Повтор |
 |---|---|
-| env `PRICEZAIM_SDK_RETRIES_ENABLED=1` | Включены |
-| `429`, `500`, `502`, `503`, `504` | Да |
-| Сеть/таймаут | Да |
-| `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS` | Да |
-| `POST`, `PATCH` без `idempotency_key` | Нет |
-| `POST`, `PATCH` с `idempotency_key` | Да |
-| `400`, `401`, `403`, `404`, `422` | Нет |
+| `429`, `500`, `502`, `503`, `504` | да |
+| сеть или таймаут | да |
+| `GET`, `HEAD`, `PUT`, `DELETE`, `OPTIONS` | да |
+| `POST`, `PATCH` без `idempotency_key` | нет |
+| `POST`, `PATCH` с `idempotency_key` | да |
+| `400`, `401`, `403`, `404`, `422` | нет |
+
+Включаются переменной `PRICEZAIM_SDK_RETRIES_ENABLED`. Дополнительно:
+`PRICEZAIM_SDK_RETRY_ATTEMPTS`, `PRICEZAIM_SDK_RETRY_BASE_DELAY_MS`.
 
 ## Исключения
 
-| Класс | Когда возникает |
-|---|---|
-| `ApiError` | HTTP `4xx/5xx` или не-JSON ответ |
-| `ValidationError` | `422`, содержит `errors` |
-| `TransportError` | Сеть, DNS, таймаут, TLS |
+`ApiError` — HTTP-ошибка или не-JSON ответ. Доступны `status`, `error_code`,
+`body`, `headers`, `request_id`, `retry_after`, `is_rate_limited`.
+
+`ValidationError` — ответ `422`, ошибки полей в `errors`.
+
+`TransportError` — сеть, DNS, таймаут, TLS.

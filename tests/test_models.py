@@ -12,7 +12,11 @@ def test_auction_dto_maps_client_profile() -> None:
         "status": "active",
         "can_bid": True,
         "required_amount": 600000,
-        "client_profile": {"inn": "500100732259", "income_salary": 120000, "marketing_agreed": True},
+        "client_profile": {
+            "inn": "500100732259",
+            "income_salary": 120000,
+            "marketing_agreed": True,
+        },
     }
 
     auction = Auction.from_dict(data)
@@ -53,7 +57,12 @@ def test_bid_deal_and_webhook_dtos() -> None:
     assert deal.document_objects()[0].original_name == "contract.pdf"
 
     webhook = Webhook.from_dict(
-        {"id": 172, "url": "https://example.com/hook", "events": ["auction.started"], "has_secret": True}
+        {
+            "id": 172,
+            "url": "https://example.com/hook",
+            "events": ["auction.started"],
+            "has_secret": True,
+        }
     )
     assert webhook.id == 172
     assert webhook.events == ["auction.started"]

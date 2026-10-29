@@ -12,8 +12,14 @@ def test_signature_and_request_headers() -> None:
     timestamp = datetime.now(timezone.utc).isoformat()
 
     assert verify(payload, secret, signature, timestamp)
-    assert verify_request(payload, secret, {"X-Webhook-Signature": signature, "X-Webhook-Timestamp": timestamp})
-    assert verify_request(payload, secret, {"HTTP_X_WEBHOOK_SIGNATURE": signature, "HTTP_X_WEBHOOK_TIMESTAMP": timestamp})
+    assert verify_request(
+        payload, secret, {"X-Webhook-Signature": signature, "X-Webhook-Timestamp": timestamp}
+    )
+    assert verify_request(
+        payload,
+        secret,
+        {"HTTP_X_WEBHOOK_SIGNATURE": signature, "HTTP_X_WEBHOOK_TIMESTAMP": timestamp},
+    )
 
 
 def test_signature_rejects_tampering_and_old_timestamp() -> None:
@@ -42,7 +48,9 @@ def test_event_getters_and_types() -> None:
 
 
 def test_event_unknown_and_numeric_id() -> None:
-    event = WebhookEvent.from_dict({"event_id": 73, "event": "future.event", "deal": {"auction_id": 1008}})
+    event = WebhookEvent.from_dict(
+        {"event_id": 73, "event": "future.event", "deal": {"auction_id": 1008}}
+    )
 
     assert event.event_id == "73"
     assert event.type is None

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from urllib.parse import quote
 
 from ..client import Client
@@ -21,6 +22,6 @@ class Resource:
         return quote(str(value), safe="")
 
     @staticmethod
-    def _files(files: tuple[FileUpload, ...] | list[FileUpload]) -> tuple[FileUpload, ...]:
+    def _files(files: Sequence[FileUpload]) -> tuple[FileUpload, ...]:
         """Нормализует список файлов."""
         return tuple(files)

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+from collections.abc import Mapping
 from datetime import datetime, timezone
-from typing import Any, Mapping
+from typing import Any
 
 
 def sign(payload: str | bytes, secret: str) -> str:
